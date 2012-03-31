@@ -1,0 +1,10 @@
+name = Coffee Club
+description = Manages the DeLonghi Coffee Club Product registraition and Customer Service enquiries.
+package = DeLonghi
+dependencies[] = taxonomy
+dependencies[] = profile
+dependencies[] = trigger
+dependencies[] = token
+dependencies[] = token_actions
+core = 6.x
+version = 6.1 dev

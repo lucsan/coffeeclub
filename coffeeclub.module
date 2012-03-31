@@ -1,0 +1,949 @@
+<?php
+
+/**
+ * @file
+ * the coffeeclub module
+ * provides forms for users to register as members and
+ * register products (if member or not)  
+ *
+ * raise an enquiry/service request on a specific product they own (if a member) 
+ * 
+ * admin interfaces for general coffeeclub settings, and for service representatives
+ * emails are controlled by tokens (target and actions) 
+ *
+ */     
+
+
+include_once('coffeeclub.data.inc');
+/**
+* Implementation of hook_menu().
+*/
+function coffeeclub_menu() {
+  
+  // -- user pages
+  
+  // the coffee club home page
+  $items['thecoffeeclub'] = array(
+    'title' => 'The Coffee Club',
+    'page callback' => 'coffeeclub_user_home',
+    'access callback' => TRUE,
+    //'access arguments' => array('coffee club'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'coffeeclub.user.inc',
+    'menu_name' => 'primary-links',
+    
+  );
+  
+  $items['thecoffeeclub/login'] = array(
+    'title' => 'Coffee Club Login',
+    'tile callback' => 'coffeeclub_user_login_title',
+    'page callback' => 'coffeeclub_user_login',
+    'access callback' => TRUE,
+    //'access arguments' => array('coffee club'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'coffeeclub.user.inc',
+    //'menu_name' => 'thecoffeeclub',
+  );
+  
+  $items['thecoffeeclub/pwretrieve'] = array(
+    'title' => 'Coffee Club Password Retrieve',
+    'page callback' => 'coffeeclub_user_pwretrieve',
+    'access callback' => TRUE,
+    //'access arguments' => array('coffee club'),
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.user.inc',
+    //'menu_name' => 'thecoffeeclub',
+  );    
+  
+  /*
+  // menu item in user page
+  $items['user/%/coffeeclub'] = array(
+    'title' => 'Coffee Club',
+    'page callback' => 'coffeeclub_user_account',
+    'access callback' => 'user_access',
+    'access arguments' => array('coffee club'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'coffeeclub.user.inc',
+    
+  );
+
+  */
+    
+  $items['thecoffeeclub/account'] = array(
+    'title' => 'Coffee Club User Account',
+    'page callback' => 'coffeeclub_user_account',
+    'access callback' => 'user_access',
+    'access arguments' => array('coffee club'),
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.user.inc',
+    //'menu_name' => 'navigation',
+    
+  );
+
+  
+    
+  $items['thecoffeeclub/service'] = array(
+    'title' => 'Coffee Club User Service Enquiry Form',
+    'page callback' => 'coffeeclub_user_service_enquiry',
+    'access callback' => 'user_access',
+    'access arguments' => array('coffee club'),
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.service.inc',
+    //'menu_name' => 'thecoffeeclub',
+  );
+  
+  
+  
+  $items['thecoffeeclub/service_home'] = array(
+    'title' => 'Service Enquiry',
+    'page callback' => 'coffeeclub_user_service_home',
+    'access callback' => 'user_access',
+    'access arguments' => array('coffee club'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'coffeeclub.service.inc',
+    
+  );
+  
+  // become a member 
+  $items['thecoffeeclub/membership'] = array(
+    'title' => 'Coffee Club User Become a member',
+    'page callback' => 'coffeeclub_user_membership',
+    'access callback' => TRUE,
+    //'access arguments' => none - anyone can go here
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.user.inc',
+    
+  );
+  
+  /*
+  // ahah product form registration callback menu 
+  $items['thecoffeeclub/product_registration_js'] = array(
+    'title' => '',
+    'page callback' => 'coffeeclub_update_register_form_js',
+    'access callback' => TRUE,
+    //'access arguments' => array('coffee club'),
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.user.inc',
+    
+  );  
+   */ 
+    
+  // This is the register a product link  
+  $items['thecoffeeclub/address/product'] = array(
+    'title' => 'Coffee Club User Product Register',
+    'title callback' => 'coffeeclub_user_product_title',
+    'page callback' => 'coffeeclub_user_product_register',
+    'access callback' => TRUE,
+    //'access arguments' => none - anyone can go here
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'coffeeclub.user.inc',
+    
+  );
+  
+  // This is the additional (pickup) address link  
+  $items['thecoffeeclub/alternate'] = array(
+    'title' => 'Coffee Club User alternate address',
+    'page callback' => 'coffeeclub_user_alternate_address',
+    'access callback' => TRUE,
+    'access arguments' => array('coffee club'),
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.user.inc',
+    
+  );
+  
+  
+  $items['thecoffeeclub/dev'] = array(
+    'title' => 'Coffee Club Dev testing',
+    'page callback' => 'coffeeclub_dev',
+    'access callback' => TRUE,
+    'access arguments' => array('coffee club'),
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.user.inc',
+    
+  );  
+      
+  
+/* ========================================================================= */ 
+// -- admin menu
+
+  $items['admin/user/thecoffeeclub'] = array(
+    'title' => 'Coffee Club',
+    'description' => t('Administer Coffee Club Settings, and Customer Product Service Requests.'),
+    'page callback' => 'coffeeclub_admin_coffeeclub',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer service settings'), // this dictates the access for all menus below this
+    
+  );
+  
+  // all user accounts  
+  $items['admin/user/thecoffeeclub/accounts'] = array(
+    'title' => 'Accounts',
+    'description' => t(''),
+    'page callback' => 'coffeeclub_admin_user_accounts',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer service settings'),     
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'coffeeclub.admin.inc',
+  );
+  
+  //a user's account
+  $items['admin/user/thecoffeeclub/accounts/%'] = array(
+    'title' => 'Account',
+    'description' => t(''),
+    'page arguments' => array(4),    
+    'page callback' => 'coffeeclub_admin_user_account',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer service settings'),     
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'coffeeclub.admin.inc',
+  );  
+  
+  $items['admin/user/thecoffeeclub/accounts/%/acount'] = array(
+    'title' => 'Account',
+    'description' => t(''),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer service settings'), 
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'coffeeclub.admin.inc',
+  );
+  
+  $items['admin/user/thecoffeeclub/accounts/%/products'] = array(
+    'title' => 'Products',
+    'description' => t(''),
+    'page arguments' => array(4),    
+    'page callback' => 'coffeeclub_admin_user_account_products',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer service settings'), 
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'coffeeclub.admin.inc',
+    'weight' => 1,
+  );  
+ 
+  $items['admin/user/thecoffeeclub/accounts/%/enquiries'] = array(
+    'title' => 'Enquiries',
+    'description' => t(''),
+    'page arguments' => array(4),    
+    'page callback' => 'coffeeclub_admin_user_account_enquiries',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer service settings'), 
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'coffeeclub.admin.inc',
+    'weight' => 2,
+  );
+  
+  /*
+    // product offer email
+    $items['admin/user/thecoffeeclub/accounts/%/product_offer'] = array(
+    'title' => 'Product Offer',
+    'description' => t(''),
+    'page arguments' => array(4),    
+    'page callback' => 'coffeeclub_admin_user_product_offer',
+    'access callback' => 'user_access',
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.admin.inc',
+  );*/   
+    
+  /*$items['admin/user/thecoffeeclub/user/accounts/product/%'] = array(
+    'title' => 'Service Customer\'s registered products',
+    'description' => t(''),
+    'page arguments' => array(5),
+    'page callback' => 'coffeeclub_admin_user_account_products',
+    'access callback' => 'user_access',
+    'type' => MENU_CALLBACK,
+    'file' => 'coffeeclub.admin.inc',
+  );*/  
+  
+    
+  
+     
+  
+  // -- admin settings  
+  $items['admin/user/thecoffeeclub/settings'] = array(
+    'title' => 'Settings',
+    'description' => t('Configure Coffee Club settings.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('coffeeclub_admin_settings_form'),
+    'access callback' => 'user_access',
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'coffeeclub.admin.inc',
+  );   
+  
+
+  /*$items['admin/user/thecoffeeclub/register'] = array(
+    'title' => 'Service Register View user details',
+    'description' => t('Service Customer Details.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('coffeeclub_service_register_form'),
+    //'access arguments' => array('administer permissions'),    
+    
+    'access callback' => 'user_access',
+    //'access arguments' => array('Coffee club service agent'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'coffeeclub.admin.inc',
+  ); */    
+  
+  drupal_add_js(drupal_get_path('module', 'coffeeclub').'/js/coffeeclub.js');
+
+  return $items;
+}
+
+
+function coffeeclub_cron(){
+  include_once('coffeeclub.user.inc');
+
+  // email service reminder cron job
+  coffeeclub_todays_annual_registrations();
+  watchdog('annual service','Annual service emails ran.', array(), WATCHDOG_NOTICE, null);
+    
+
+}
+
+
+/*function coffeeclub_add(){ return "add";}
+function coffeeclub_overview(){ return "overview";}*/
+
+function coffeeclub_perm(){
+  return array('administer service settings','coffee club');
+}
+
+function coffeeclub_user_login_title(){
+  return user_is_logged_in() ? t('Logout') : t('Login');
+}
+
+function coffeeclub_user_product_title(){
+  return user_is_logged_in() ? t('Register another product') : t('Register a product');
+}
+
+function coffeeclub_user_home(){
+  global $user;
+  $_SESSION['origin']['page'] = 'coffeeclub';
+  //coffeeclub_dev();
+  //coffeeclub_cron();
+
+  if($user->uid){ // user is loged on
+
+    $welcome_message = _coffeeclub_create_user_welcome_message($user);
+
+    return $welcome_message;
+  
+  }else{
+    
+    
+    return ''; //drupal_get_form('user_login_block');
+  }
+   
+}
+
+function coffeeclub_user_login() {
+
+    $login_form = drupal_get_form('coffeeclub_user_login_form',null,null);  // in coffeeclub.user.inc
+    
+    $password_form = drupal_get_form('coffeeclub_user_password_retrieval_form', null, null);   
+
+    return '<div class="login-wrapper" >'.
+    '</div class="coffeeclub-login" >'.
+    $login_form.        
+    '</div></div>'.
+    '<div id="password" >'.
+    $password_form.
+    '</div>';    
+  
+}
+
+
+/**
+ * become a member page
+ */ 
+function coffeeclub_user_membership(){
+
+$_SESSION['coffeeclub']['membership_route'] = 'membership';
+$membership_form = drupal_get_form('coffeeclub_user_membership_form'); // in coffeeclub.user.inc
+ 
+ $user_product_register_form = drupal_get_form('coffeeclub_user_product_register_form');  // in coffeeclub.user.inc
+
+ $disable_member = ''; $disable_product = '';
+ if(count(arg()) > 2){ 
+   $disable_member = ' disabled ';  
+ }else{
+   $disable_product = ' disabled ';
+ }
+
+  return '<div id="coffeeclub-user-membership-form" >'.
+  '<div id="twinpack-message" class="legend" >If you purchased a bean to cup machine you will automatically be sent a free twin pack of De\'Longhi natural descaler once we have verified your product ID number.</div>'.  
+  '<div id="step-message" class="legend" >Please fill in and submit Step 1 of the form before proceeding to step 2</div>'.
+  '<div id="coffeeclub-user-membership" class="'.$disable_member.'" >'.
+  '<h2>STEP 1: Personal Registration</h2>'.
+  $membership_form.
+  '</div>'.
+  '<div id="coffeeclub-product-register" class="'.$disable_product.'" >'.  
+  '<h2>STEP 2: Register a Product</h2>'.
+  $user_product_register_form.
+  '</div>'.
+  '</div>'.    
+  '<br class="float: none;" />';
+
+}
+
+
+
+
+/*function coffeeclub_user_register(){
+  global $user;
+   
+  $_SESSION['origin']['page'] = 'coffeeclub_register';
+  
+  if ($user->uid) {
+    drupal_goto('user/'.$user->uid);  
+  } else {
+    drupal_goto('user/register');
+  }
+   
+     
+
+}*/
+
+function coffeeclub_user_product_register() {
+  global $user;
+
+  $address_form = drupal_get_form('coffeeclub_user_address_register_form'); 
+  $user_product_register_form = drupal_get_form('coffeeclub_user_product_register_form');
+  
+  $disable_member = ''; $disable_product = '';
+  if(count(arg()) > 2){ 
+    $disable_member = ' disabled ';  
+  }else{
+    $disable_product = ' disabled ';
+  }
+  
+  $welcome = "<div></div>";
+  if($user->uid){ $welcome = _coffeeclub_create_user_welcome_message($user); }
+
+  $bean_text = "";
+  if($user->uid) $bean_text = '<div  id="twinpack-message" >If you purchased a bean to cup machine you will automatically be sent a free twin pack of De\'Longhi natural descaler once we have verified your product ID number.</div>';  
+
+  
+  return  $welcome.
+  '<div id="coffeeclub-user-address-form" >'.
+  $bean_text.
+  '<div  id="step-message" >Please fill in and submit Step 1 of the form before proceeding to step 2</div>'.
+  '<div id="coffeeclub-user-address" class="'.$disable_member.'" >'.
+  '<h2>STEP 1 : Personal Registration</h2>'.
+  $address_form.
+  '</div>'.
+  '<div id="coffeeclub-product-register" class="'.$disable_product.'" >'.  
+  '<h2>STEP 2 : Register a Product</h2>'.
+  $user_product_register_form.
+  '</div>'.
+  '</div>'.    
+  '<br class="float: none;" />';
+}
+
+function coffeeclub_user_alternate_address(){
+  //return drupal_get_form('coffeeclub_user_address_register_form');
+  
+  global $user;
+  
+  $address_form = drupal_get_form('coffeeclub_user_address_register_form');
+
+  $alternate_form = drupal_get_form('coffeeclub_user_alternate_address_form'); 
+  //$user_product_register_form = drupal_get_form('coffeeclub_user_product_register_form');
+  
+
+  
+  $welcome = "<div></div>";
+  if($user->uid){ $welcome = _coffeeclub_create_user_welcome_message($user); }
+
+  
+  return  $welcome.
+  '<div id="" >'.
+  '<div id="coffeeclub-user-address" class="" >'.
+  '<h2>Personal Registration</h2>'.
+  $address_form.
+  '</div>'.  
+  
+  '<div id="coffeeclub-user-alternate-address" class="" >'.
+  '<h2>Alternate Address</h2>'.
+  $alternate_form.
+  '</div>'.
+ 
+  '</div>'.    
+  '<br class="float: none;" />';  
+  
+  
+  
+}
+
+function coffeeclub_user_account(){
+  global $user;
+  profile_load_profile($user);
+
+  //$page_title_image = '<img class="page-title-image" src="" />';
+  //$welcome_message = _coffeeclub_create_user_welcome_message($user);
+  $address_form = drupal_get_form('coffeeclub_user_address_register_form'); // in coffeeclub.user.inc
+  //$products_list = coffeeclub_user_products_registered_list(); // in coffeeclub.user.inc
+  $password_form = drupal_get_form('coffeeclub_user_password_change_form');
+  
+  $registraitions_list_form = drupal_get_form('coffeeclub_user_registered_products_list_form'); // in coffeeclub.user.inc
+
+            //       
+   return '<div id="coffeeclub-user-address-form" >'.
+          '<div id="step-message" >Please fill in and submit Step 1 of the form before proceeding to step 2</div>'.
+          '<div id="coffeeclub-user-address" class="" >'.
+          '<h2>STEP 1 : Personal Registration</h2>'.
+          $address_form.
+          $password_form.
+          '</div>'.
+          '<div id="coffeeclub-product-list" class="" >'.  
+          '<h2>STEP 2 : Your registered products</h2>'.
+          $registraitions_list_form.
+          '</div>'.
+          '</div>'.    
+          '<br class="float: none;" />';
+}
+
+function coffeeclub_user_service_enquiry(){
+  global $user;
+  
+  //profile_load_profile($user);
+  
+  //$page_title_image = '<img class="page-title-image" src="" />';
+  $welcome_message = _coffeeclub_create_user_welcome_message($user);
+  //$intro_message = '<div>"Got a question? ask our customer care team or, BOOK A SERVICE"</div>';
+  $product_list_form = drupal_get_form('coffeeclub_service_form'); // in coffeeclub.service.inc
+  $enquiry_type_form = drupal_get_form('coffeeclub_enquiry_type_form'); // in coffeeclub.service.inc  
+  $enquiry_message_form = drupal_get_form('coffeeclub_enquiry_message_form'); // in coffeeclub.service.inc
+  $enquiry_list_form = drupal_get_form('coffeeclub_enquiry_list_form'); // in coffeeclub.service.inc  
+
+  $output = $welcome_message.
+        //$intro_message.
+        '<div class="enquiry" >'.
+        '<div class="product-details service-enquiry-form" >'.
+        '<h2>Your products</h2>'.        
+        $product_list_form.
+        '</div>'.
+        '<div class="enquiry-type service-enquiry-form" >'.
+        '<h2>Type of enquiry</h2>'.        
+        $enquiry_type_form.
+        '</div>';
+  
+  $args = arg();      
+  if ( isset($args[2]) && $args[2] == 'enquiries' ){
+    $output .= '<div class="enquiry-list service-enquiry-form" >'.
+          '<h2>View current enquiries</h2>'.        
+          $enquiry_list_form.
+          '</div>';   
+  } else {        
+  $output .= '<div class="enquiry-message service-enquiry-form" >'.
+        '<h2>Your message</h2>'.        
+        $enquiry_message_form.
+        '</div>';
+  }      
+       
+        
+                        
+  $output .= '</div>';
+        
+        
+        
+ return $output;        
+
+}
+
+function coffeeclub_user_service_home(){
+  global $user;
+  unset($_SESSION['enquiry']);
+  $page_title_image = '<img class="page-title-image" src="" />';
+  $welcome_message = _coffeeclub_create_user_welcome_message($user);
+  
+
+  
+  return $welcome_message;
+
+}
+
+// -- admin
+function coffeeclub_admin_coffeeclub(){
+
+     $admin_links = '<dl class="admin-list" >'.
+      '<dt>'.l('Service Customer Accounts','admin/user/thecoffeeclub/accounts').'</dt>'.
+      '<dd>List members, check their details, products and enquiries. Respond to enquiries.</dd>'.    
+      '<dt>'.l('Coffee Club Settings','admin/user/thecoffeeclub/settings').'</dt>'.
+      '<dd>Change Coffee Club settings, Service email addresses, Enquiry type lists.</dd>'.
+      '</dt>';
+      
+      return $admin_links;      
+      
+      
+      
+      
+      /*$list = array(
+      l('Service Customer Accounts','admin/user/thecoffeeclub/accounts').
+      '<div>List members, check their details, products and enquiries. Respond to emquiries.</div>',      
+      //l('Service Customer Requests (links from accounts)','admin/user/thecoffeeclub/service'),
+      //l('Service Customer Details (links from accounts)','admin/user/thecoffeeclub/register'),
+      l('Coffee Club Settings','admin/user/thecoffeeclub/settings').
+      '<div>Change Coffee Club settings, Service email addresses, Enquiry type lists.</div>',      
+    );
+    return theme('item_list',$list,'Administer Coffee Club');*/
+    
+    
+    
+    
+}
+
+function coffeeclub_admin_user_accounts(){
+
+  //$accounts_form = drupal_get_form('coffeeclub_admin_service_accounts_form');
+  $accounts_view = coffeeclub_admin_service_accounts_view();
+    
+  return $accounts_view;
+}
+
+function coffeeclub_admin_user_account($uid){
+  $details = coffeeclub_admin_user_account_user($uid); // in coffeeclub.admin.inc
+
+  return $details['account']->title.
+  $details['address table'];  
+  
+
+}
+
+function coffeeclub_admin_user_account_products($uid){
+  $details = coffeeclub_admin_user_products($uid); // in coffeeclub.admin.inc
+  
+  return '<div id="user-products" class="user-products user-products-'.$uid.'" >'.
+  $details['account']->title.
+  $details['products table'].
+  '</div>';
+}
+
+function coffeeclub_admin_user_account_enquiries($uid){
+  $details = coffeeclub_admin_user_enquiries($uid); // in coffeeclub.admin.inc
+
+  return '<div id="user-account" class="user-account user-account-'.$uid.'" >'.
+  $details['account']->title.
+  $details['enquiries table'].
+  '</div>';
+}
+
+// -- helper
+function _coffeeclub_create_user_welcome_message($user){
+  profile_load_profile($user);
+  
+  return '<div class="welcome" >'.
+  '<div class="welcome-user-name welcome " > Hello '.$user->profile_forename.'! </div>'.
+  '<div class="my-account" ><a class="my-account" href="'.base_path().'thecoffeeclub/account" >View my account</a></div>'.
+  '</div>';
+}
+
+
+
+
+//==============================================================================
+function coffeeclub_dev(){
+
+  return "";
+
+   // mktime h m s m d y
+        $today = time();
+    $this_date = date('Y-m-d',$today);
+    $this_date = explode("-",$this_date);
+        
+    $this_year = date('Y',$today);
+    $this_month_date = mktime(0,0,0,($this_date[1]-1),01,$this_date[0]);    
+    $next_month_date = mktime(0,0,0,($this_date[1]+1),01,$this_date[0]);
+         
+   //coffeeclub_load_todays_annual_product_registrations
+   $todays_registraitions = coffeeclub_load_annual_product_registrations($this_year, $this_month_date, $next_month_date);  // data.inc
+   
+   /*dbg*/ drupal_set_message('<pre>$todays_registraitions <br>'.count($todays_registraitions).'</pre>');
+   
+   
+   /*dbg*/ drupal_set_message('<pre>$this_year <br>'.print_r($this_year ,true).'</pre>');
+   
+   /*dbg*/ drupal_set_message('<pre>$this_month_date <br>'.print_r(date('d-m-Y',$this_month_date) ,true).'</pre>');   
+   /*dbg*/ drupal_set_message('<pre> $next_month_date<br>'.print_r(date('d-m-Y',$next_month_date) ,true).'</pre>');    
+   
+   /*dbg*/ drupal_set_message('<pre> <br>'.print_r($todays_registraitions ,true).'</pre>');
+   
+   $send = false;
+      foreach ($todays_registraitions as $key => $value){
+   
+     $reg_date = date('Y-m-d',$value->registraition_date);
+     $reg_date = explode("-",$reg_date);
+     
+     /*dbg*/ drupal_set_message('<pre>$reg_date <br>'.print_r($reg_date ,true).'</pre>');
+   
+        $offer = $value->special_offers;
+        
+
+     // free service offer
+     if( is_numeric(stripos($offer,"service")) == 1){ $free_service = true; /*dbg*/ drupal_set_message('<pre> <br>free service</pre>'); }
+     
+    // month and date match
+    if ( ($reg_date[1] <= $this_date[1]) && ($reg_date[2] <= $this_date[2]) ){ $send = true; drupal_set_message('<pre> <br>month</pre>'); }
+    
+    // now catch any missed ones from last month
+    if ( ($reg_date[1] < $this_date[1]) ) { $send = true; drupal_set_message('<pre> <br>catch</pre>');}
+    
+
+
+    
+        if ($send == true){
+        
+             /*dbg*/ drupal_set_message('<pre> $send<br>'.print_r($send ,true).'</pre>');
+        }
+   
+    }
+   /*
+    $user->uid = 1;
+    $prods = coffeeclub_user_product_registraitions_load($user);
+     drupal_set_message('<pre> <br>'.print_r($prods ,true).'</pre>');
+    
+
+    foreach( $prods as $prod){
+      $dets = coffeeclub_product_load($prod->product_nid);
+
+          drupal_set_message('<pre> <br>'.print_r($dets ,true).'</pre>');
+    }
+
+    $ta = array();   
+   for( $i=1; $i<31; $i++){
+     $d = mktime(12,0,0,12,$i,2010);
+     $t = array();
+     $t['unix'] = $d;
+     $t['date'] = date('d-m-Y',$d);
+      $ta[]=$t;    
+      drupal_set_message('<pre> <br>'.date('d-m-Y',$d).' = '.$d.'</pre>');
+   }
+    */
+
+  
+  /*
+  //theme('node', $node, $teaser, $page)
+  $node = array('node');
+   $page = array('page'); 
+
+  return theme('coffeeclub', $node, $page);
+  
+  //return theme('page',array());
+  
+  return 'dddddddddddd';
+  */
+  return "";
+}
+
+
+function coffeeclub_preprocess_page(&$vars){
+//print '<pre>';
+//print_r($vars);
+
+//unset($vars['css']['all']);
+
+}
+
+
+/*
+function theme_coffeeclub( $node, $page ){
+  return 'theme_coffeeclub called';
+}
+*/
+
+/**
+* Implementation of hook_theme().
+*
+*/
+function coffeeclub_theme(){
+  return array(
+    'coffeeclub' => array(
+      'arguments' => array('content' => NULL, 'page' => TRUE),
+      'template' => 'coffeeclub',
+      ),
+    );
+}
+
+// email token functions
+
+/**
+ * Implementation of hook_hook_info
+ */
+function coffeeclub_hook_info() {
+  // Define triggers
+  $items = array(
+    'coffeeclub' => array(
+      'coffeeclub' => array(
+        'customer_product_register' => array(
+          'runs when' => t('When a non-member customer registers a product.'),
+        ),
+              
+        'member_welcome' => array(
+          'runs when' => t('When a user registers as a member.'),
+        ),
+        
+
+        'member_product_register' => array(
+          'runs when' => t('When a member registers a product.'),
+        ),
+        
+        'member_enquiry_create' => array(
+          'runs when' => t('When a member creates an enquiry.'),
+        ),
+                        
+        'service_enquiry_update' => array(
+          'runs when' => t('When support updates customer enquiry message or status.'),
+        ),
+        'annual_service_reminder' => array(
+          'runs when' => t('Service Reminder. When a &pound;799.99+ Bean to Cup owner\'s registration date is due (annually).'),
+        ),        
+        'annual_discount_service_reminder' => array(
+          'runs when' => t('Discount Service Offer. When a >&pound;799.99 Bean to Cup owner\'s registration date is due (annually).'),
+        ),
+        'password_reminder' => array(
+          'runs when' => t('User requests password reset.'),
+        ),                                             
+      ),
+    ),
+  );
+  return $items;
+}
+    
+    
+    
+/**
+ * Implementation of hook_action_info_alter
+ */
+function coffeeclub_action_info_alter(&$info) {
+  $triggers = array(
+    'service_enquiry_update',
+    'customer_product_register',
+    'member_product_register',
+    'service_non_member_product_register_notification',
+    'member_enquiry_create',
+    'member_welcome',
+    'annual_service_reminder',
+    'annual_discount_service_reminder',
+    'password_reminder'    
+  );
+  // We want to add this modules's triggers to the system email action
+  if (isset($info['system_send_email_action']['hooks']['coffeeclub'])) {
+    array_merge($info['system_send_email_action']['hooks']['coffeeclub'], $triggers);
+    
+  } else {
+    $info['system_send_email_action']['hooks']['coffeeclub'] = $triggers;
+  }
+  
+  // We want to add this modules's triggers to the token email action
+  if (isset($info['token_actions_send_email_action']['hooks']['coffeeclub'])) {
+    array_merge($info['token_actions_send_email_action']['hooks']['coffeeclub'], $triggers);
+  } else {
+    $info['token_actions_send_email_action']['hooks']['coffeeclub'] = $triggers;
+  }      
+
+
+ 
+  // We want to add this modules's triggers to the message action
+  if (isset($info['system_message_action']['hooks']['coffeeclub'])) {
+    array_merge($info['system_message_action']['hooks']['coffeeclub'], array('our_new_trigger'));
+  } else {
+    $info['system_message_action']['hooks']['coffeeclub'] = array('our_new_trigger');
+  }
+  
+
+  
+}
+
+
+ /**
+  * Implementation of hook_trigger_name().
+  */
+ function coffeeclub_coffeeclub($op, $user) {
+ 
+   // We support a subset of operations.
+   if (!in_array($op, array(
+    'service_enquiry_update',
+    'customer_product_register',
+    'member_product_register',
+    'service_non_member_product_register_notification',
+    'member_enquiry_create',
+    'member_welcome',
+    'annual_service_reminder',
+    'annual_discount_service_reminder',
+    'password_reminder' 
+    ))) { return; }
+   $aids = _trigger_get_hook_aids('coffeeclub', $op);
+   $context = array(
+     'hook' => 'coffeeclub',
+     'op' => $op,
+     'user' => $user,
+   );
+   actions_do(array_keys($aids), $user, $context);
+ }
+ 
+/*   
+8.    module_invoke_all('onthisdate', 'block_viewed', $user);
+*/
+
+
+function coffeeclub_token_values($type, $object = NULL, $options = array()){
+  
+  $tokens = array();
+  switch($type){
+    case 'coffeeclub':
+    case 'user':
+      $user = $object;    
+      $tokens['customer-full-name'] = ucfirst($user->profile_forename).' '.ucfirst($user->profile_surname);
+      $tokens['customer-email'] = $user->mail;
+      $tokens['customer-address'] = $user->customer_address;
+      $tokens['product-details'] = $user->product_details;                  
+      $tokens['service-message'] = $user->service_message;
+      $tokens['enquiry-status'] = $user->enquiry_status;
+      if($user->is_customer_services){
+        $tokens['services-email'] = variable_get('coffeeclub_customer_dept_email','');
+      }else{
+        $tokens['services-email'] = variable_get('coffeeclub_service_dept_email',''); 
+      }
+      
+                 
+      //$tokens['customer-dept-email'] = variable_get('coffeeclub_customer_dept_email','');
+      $tokens['model'] = $user->model;      
+      $tokens['serial'] = $user->serial;
+      $tokens['product-class'] = $user->product_class;
+      if(isset($user->beantocupoffer) &&  $user->beantocupoffer==true){
+        $tokens['bean-to-cup-offer'] = variable_get('coffeeclub_beantocup_offer_text','');
+      }else{
+        $tokens['bean-to-cup-offer'] = '';
+      }
+            $tokens['new-password'] = $user->new_password;
+          
+      break;
+    
+
+  }
+
+    return $tokens;
+
+}
+
+
+function coffeeclub_token_list($type){
+ 
+  if($type=='coffeeclub' || $type=='all'){
+     $tokens['coffeeclub']['customer-full-name'] ='The customer/member\'s full name.';
+     $tokens['coffeeclub']['customer-email'] ='The customer/member\'s email address.';
+     $tokens['coffeeclub']['customer-address'] ='non-member customer address.';     
+     $tokens['coffeeclub']['product-details'] ='non-member customer\'s product details.';          
+     $tokens['coffeeclub']['service-message'] ='Services have updated the cutomers enquiry service message.';
+     $tokens['coffeeclub']['enquiry-status'] ='Status of the customer\'s enquiry.';
+     $tokens['coffeeclub']['services-email'] ='Services/Customer Dept. email address.';     
+     //$tokens['coffeeclub']['customer-dept-email'] ='Customer Dept. email address.';
+     $tokens['coffeeclub']['model'] ='Product name/model.';
+     $tokens['coffeeclub']['serial'] ='Product serial number/product ID.';
+     $tokens['coffeeclub']['product-class'] ='Product class ie: Bean To Cup, Pump Espresso.';               
+     $tokens['coffeeclub']['bean-to-cup-offer'] ='Bean to cup offer.';
+     $tokens['coffeeclub']['new-password'] ='New Password.';                
+     //$tokens['coffeeclub']['customer-message'] ='The customer\'s message.';               
+     return $tokens;
+  } 
+
+}
+

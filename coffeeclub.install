@@ -1,0 +1,55 @@
+<?php
+
+function coffeeclub_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      // the {tablename} syntax is so multisite installs can add a
+      // prefix to the table name as set in the settings.php file
+      //if(!db_table_exists("product_registrations"))
+	      db_query("CREATE TABLE IF NOT EXISTS {product_registrations} (
+        `rid` int(11) NOT NULL AUTO_INCREMENT COMMENT 'product registraition ID',
+        `uid` int(11) NOT NULL COMMENT 'User UID',
+        `product_nid` int(11) NOT NULL COMMENT 'node id of the product',
+        `model` text NOT NULL COMMENT 'model number',
+        `serial` text NOT NULL COMMENT 'serial number of specific product',
+        `supplier_shop` text NOT NULL COMMENT 'The shop the item was bought in',
+        `purchase_date` int(11) NOT NULL COMMENT 'date purchased',
+        `registraition_date` int(11) NOT NULL COMMENT 'date this record was created',
+        `contact_methods` text NOT NULL COMMENT 'serialized string of user accepted contact methods',
+        `has_receipt` int(11) NOT NULL COMMENT 'The customer has a reciept for this item (1=yes, 0/null=no)',
+        `special_offers` text NOT NULL COMMENT 'serialized string of speical offers and dispatch states',        
+        PRIMARY KEY (`rid`),
+        KEY `uid` (`uid`)
+        ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+        ");
+	     
+        db_query("CREATE TABLE IF NOT EXISTS {product_service_enquiries} (
+        `eid` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Enquiry ID',
+        `rid` int(11) NOT NULL COMMENT 'Product Registraition ID',
+        `enquiry_type_id` int(11) NOT NULL COMMENT 'The taxonomy tid for this enquiry type',
+        `status` text NOT NULL COMMENT 'status of this enquiry',
+        `customer_message` text NOT NULL COMMENT 'Additional information from the customer',
+        `service_message` text NOT NULL COMMENT 'Additional information from Services',
+        PRIMARY KEY (`eid`),
+        KEY `rid` (`rid`),
+        KEY `enquiry_type_id` (`enquiry_type_id`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+      ");	     
+	     
+
+   
+
+      break;
+  }
+}
+
+function coffeeclub_uninstall() {
+  db_query('DROP TABLE {product_registrations};');
+  db_query('DROP TABLE {product_service_enquiries};');
+  cache_clear_all('*', 'cache', TRUE);
+  cache_clear_all('*', 'cache_filter', TRUE);
+  cache_clear_all('*', 'cache_menu', TRUE);
+  cache_clear_all('*', 'cache_page', TRUE);
+}
+

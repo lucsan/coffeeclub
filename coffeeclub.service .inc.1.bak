@@ -1,0 +1,256 @@
+<?php
+
+function coffeeclub_service_form(){
+
+/*
+  aquire all customers current products
+  products - select
+  type of emquiry - select
+  message - textarea
+  
+  alternate address - button
+  print address - button
+  send - button
+  back - button
+  
+  your current enquiries - list
+  your responce message - textarea
+  reply - button
+  
+  (note there is no mechanism shown for selecting the enquiery the reply pertains to)
+  (note there is no art direction for this page)
+  
+*/
+
+  $vid = 8; // current vocabulary id for Service Enquiry types
+     
+  //$vid = 1; // dev vid
+  //$services_list = taxonomy_get_children($tid, $vid = 0, $key = 'tid');
+  $service_enquiry_taxonomy = taxonomy_get_tree($vid, $parent = 0, $depth = -1, $max_depth = NULL);
+  $service_enquiry_list = array();
+  foreach( $service_enquiry_taxonomy as $item) { $service_enquiry_list[$item->tid."|".$item->name] = $item->name; }
+  $skeys = array_keys($service_enquiry_list);
+  $default_service_enquiry = $skeys[0];
+  
+  $product_registraitions = coffeeclub_user_product_registraitions_load();
+  
+  //$product_registraitions = array();
+  if( count($product_registraitions) < 1 ) { 
+     $form['no_records'] = array(
+      '#type' => 'hidden',
+      '#prefix' => '<br /><br />You have not registered a product with us yet. To do so please visit '.l('Register a product','thecoffeeclub/address'),
+      '#suffix' => '<br /><br /><br /><br /><br /><br />',
+     );
+     return $form;
+  }
+  
+  $product_list = array();
+  foreach($product_registraitions as $item){ $product_list[$item->rid] = $item->model; }
+  $pkeys = array_keys($product_list);
+  $default_product = $pkeys[0];
+
+
+  $form['product'] = array(
+    '#title' => t('Product'),
+    '#type' => 'select',
+    '#description' => t(''),
+    '#options' => $product_list,
+    '#default_value' => $default_product,
+  );
+  
+  $form['enquiry_type'] = array(
+    '#title' => t('Type of enquiry'),
+    '#type' => 'select',
+    '#description' => t(''),
+    '#options' => $service_enquiry_list,
+    '#default_value' => $default_service_enquiry,
+  );
+  
+  $form['message'] = array(
+    '#title' => t(''),
+    '#type' => 'textarea',
+    '#default_value' => "YOUR MESSAGE:\nType here",
+    '#rows' => 4,
+    '#description' => t(''),    
+  );
+  
+  
+  $form['address_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('Alternate pickup address'),
+  );
+  
+  $form['print_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('PRINT SERVICE ADDRESS LABEL'),
+  );        
+  
+  $form['send_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('send'),
+  );
+    
+  $form['back_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('back'),
+    '#redirect' => array('coffee-club/service_home',''),
+  );
+  
+  
+  $current_enquiries = '<div><ul><li>List of current enquiries</li></ul></div>';
+  $form['current_enquieries'] = array(
+    '#type' => 'hidden',
+    '#prefix' => $current_enquiries,
+  
+  );
+  
+  $form['reply'] = array(
+    '#title' => t(''),
+    '#type' => 'textarea',
+    '#description' => t(''),
+    '#default_value' => "YOUR RESPONSE:\nType here",
+    //'#default_value' => 'a type',
+  );  
+  
+  
+  $form['reply_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('reply'),
+  );  
+  
+  return $form;
+
+}
+
+/**
+* Validate the form.
+*/
+function coffeeclub_sevice_form_validate($form, &$form_state) {
+  if ($form_state['values']['user_name'] == 'King Kong') {
+  // We notify the form API that this field has failed validation.
+  form_set_error('user_name',
+  t('King Kong is not allowed to use this form.'));
+  }
+}
+
+/**
+* form submission.
+*/
+function coffeeclub_service_form_submit($form, &$form_state) {
+  $name = $form_state['values']['user_name'];
+  drupal_set_message(t('Thanks for filling out the form, %name', 
+    array('%name' => $name)));
+}
+
+
+
+
+function coffeeclub_service_accounts_form(){
+
+/*
+lists users enquiries
+  
+*/
+
+
+  $form['product'] = array(
+    '#title' => t('Product'),
+    '#type' => 'select',
+    '#description' => t(''),
+    '#default_option' => 'a product',
+  );
+  
+
+  
+  
+  
+  
+  
+  $form['reply_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('reply'),
+  );  
+  
+  return $form;
+
+}
+
+
+
+/**
+* Validate the form.
+*/
+function coffeeclub_sevice_accounts_form_validate($form, &$form_state) {
+  if ($form_state['values']['user_name'] == 'King Kong') {
+  // We notify the form API that this field has failed validation.
+  form_set_error('user_name',
+  t('King Kong is not allowed to use this form.'));
+  }
+}
+
+/**
+* form submission.
+*/
+function coffeeclub_service_accounts_form_submit($form, &$form_state) {
+  $name = $form_state['values']['user_name'];
+  drupal_set_message(t('Thanks for filling out the form, %name', 
+    array('%name' => $name)));
+}
+
+
+
+/*
+
+*/
+
+function coffeeclub_service_register_form(){
+
+/*
+lists users enquiries
+  
+*/
+
+
+  $form['product'] = array(
+    '#title' => t('Product'),
+    '#type' => 'select',
+    '#description' => t(''),
+    '#default_option' => 'a product',
+  );
+  
+
+  
+  
+  
+  
+  
+  $form['reply_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('reply'),
+  );  
+  
+  return $form;
+
+}
+
+
+
+/**
+* Validate the form.
+*/
+function coffeeclub_sevice_register_form_validate($form, &$form_state) {
+  if ($form_state['values']['user_name'] == 'King Kong') {
+  // We notify the form API that this field has failed validation.
+  form_set_error('user_name',
+  t('King Kong is not allowed to use this form.'));
+  }
+}
+
+/**
+* form submission.
+*/
+function coffeeclub_service_register_form_submit($form, &$form_state) {
+  $name = $form_state['values']['user_name'];
+  drupal_set_message(t('Thanks for filling out the form, %name', 
+    array('%name' => $name)));
+}

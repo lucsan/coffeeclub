@@ -1,0 +1,478 @@
+<?php
+
+
+function coffeeclub_admin_settings_form(){
+
+     //$vocabulary = taxonomy_get_tree($vid, $parent = 0, $depth = -1, $max_depth = NULL);
+     
+     $vocabularies = taxonomy_get_vocabularies();
+     
+     /*dbg*/ //drupal_set_message('<pre>$vocabularies <br>'.print_r($vocabularies ,true).'</pre>');
+     /*dbg*/ //drupal_set_message('<pre> <br>'.print_r(variable_get( 'coffeeclub_service_enquiry_types_vid', 1 ) ,true).'</pre>');
+     
+     $vocab_options = array();
+     foreach( $vocabularies as $vocabulary ){ $vocab_options[$vocabulary->vid] = $vocabulary->name; }
+
+
+
+  /*$form['user_name'] = array(
+    '#title' => t('Your Name'),
+    '#type' => 'textfield',
+    '#description' => t('Please enter your name.'),
+  );*/
+  
+  $form['coffeeclub_service_enquiry_types_vid'] = array(
+    '#title' => t('Service enquiry types list'),
+    '#type' => 'select',
+    '#options' => $vocab_options,
+    '#default_value' => variable_get( 'coffeeclub_service_enquiry_types_vid', 1 ),
+    '#description' => t('Please select the Service enquiry types list from the dropdown.'),
+  );
+  
+  $form['coffeeclub_service_enquiry_status_vid'] = array(
+    '#title' => t('Service enquiry status list'),
+    '#type' => 'select',
+    '#options' => $vocab_options,
+    '#default_value' => variable_get( 'coffeeclub_service_enquiry_status_vid', 1 ),
+    '#description' => t('Please select the Service enquiry status list from the dropdown. This vocabulary must contain either open or new as a state.'),
+  );
+  
+  $form['coffeeclub_service_suppliers_vid'] = array(
+    '#title' => t('Suppliers list'),
+    '#type' => 'select',
+    '#options' => $vocab_options,
+    '#default_value' => variable_get( 'coffeeclub_service_suppliers_vid', 1 ),
+    '#description' => t('Please select the Suppliers list from the dropdown.'),
+  );      
+  
+  
+  
+  /*$form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Update')
+  );*/
+  
+  return system_settings_form($form);
+
+}
+
+
+
+/**
+* Validate the form.
+*/
+function coffeeclub_admin_settings_form_validate($form, &$form_state) {
+
+}
+
+/**
+* form submission.
+*/
+function coffeeclub_admin_settings_form_submit($form, &$form_state) {
+  
+
+  
+}
+
+
+/**
+* 
+*/
+function coffeeclub_admin_service_accounts_view() {
+  
+   if( isset($_GET['page']) ){
+    $page = $_GET['page'];
+   }else{
+    $page = 0;
+   }
+   $page_length = 10;
+  
+  // get all users uids and names
+  $result = db_query("
+  SELECT uid, name FROM {users}
+  LIMIT %d, %d
+  ", (($page)*$page_length), $page_length);
+  
+  while($row = db_fetch_object($result)) $rows[] = $row;
+  
+  // load profile for each user
+  foreach($rows as $user){
+  if( $user->uid ==0 ) continue;
+  profile_load_profile($user);
+  $users[] = $user;
+  }
+  
+  $pages = intval(count($users)/$page_length);
+  /*dbg*/ drupal_set_message('<pre>$pages <br>'.$pages.'</pre>');
+  
+  // create table of users 
+  $output = '<table>
+   <tr>
+   <th>Account number</th><th>Customer name</th><th>Products</th><th>Enquiries</th><th>Edit</th>';
+  foreach( $users as $user ){
+  $user_name = '';
+  if( isset($user->profile_forename) && isset($user->profile_surname) ){
+   $user_name = $user->profile_forename.' '.$user->profile_surname;
+  }else{
+   $user_name = $user->name;
+  }
+  
+  $user_products = coffeeclub_user_product_registraitions_load($user);
+  $no_of_products = count($user_products);
+  $user_enquiries = coffeeclub_enquiries_load_by_user($user);
+  $no_of_enquiries = count($user_enquiries);
+  
+  /*dbg*/ //drupal_set_message('<pre>$user_products <br>'.print_r($user_products ,true).'</pre>');
+    
+   $output .= '
+     <tr>
+      <td>'.$user->uid.'</td>
+      <td>'.$user_name.'</td>
+      <td>'.$no_of_products.'</td>      
+      <td>'.$no_of_enquiries.'</td>
+      <td>'.l('show','admin/user/thecoffeeclub/accounts/'.$user->uid.'/account').'</td>                          
+     </tr>
+     '; 
+  }
+  $output .= 
+   '</tr>
+   </table>';
+   
+ 
+  $output .= '<div>';
+  
+  //$pages = 10;
+  
+  for( $i=0; $i<$pages; $i++){
+    $output .= '<span >'.l('['.$i.']','admin/user/thecoffeeclub/accounts',array('query' => array('page' => $i))).'</span>';  
+  }
+  
+  
+  if( ($page+1) < $pages )  $output .= '<span >'.l('next>','admin/user/thecoffeeclub/accounts',array('query' => array('page' => $page+1))).'</span>';
+  if( ($page-1) > 0 )  $output .= '<span >'.l('<prev','admin/user/thecoffeeclub/accounts',array('query' => array('page' => $page+1))).'</span>';
+  
+  
+  $output .= '</div>';     
+  
+  
+  
+  return $output;
+  
+}
+
+
+
+
+/**
+* 
+*/
+function coffeeclub_admin_service_accounts_form($form, &$form_state) {
+
+    if(isset($form_state)){}
+     // get all users uids and names
+     $result = db_query("
+     SELECT uid, name FROM {users}
+     ");
+     
+     while($row = db_fetch_object($result)) $rows[] = $row;
+     
+     // load profile for each user
+     foreach($rows as $user){
+      if( $user->uid ==0 ) continue;
+      profile_load_profile($user);
+      $users[] = $user;
+     }
+     
+     // create table of users 
+     $output = '<table><tr><th>Account number</th><th>Customer name</th>';
+     foreach( $users as $user ){
+     $user_name = '';
+     if( isset($user->profile_forename) && isset($user->profile_surname) ){
+       $user_name = $user->profile_forename.' '.$user->profile_surname;
+     }else{
+       $user_name = $user->name;
+     }
+        
+       $output .= '
+       <tr>
+        <td>'.$user->uid.'</td>
+        <td>'.$user_name.'</td>        
+       </tr>
+       '; 
+     }
+     $output .= '</tr></table>';
+     
+     $form['output'] = array(
+      '#type' => 'markup',
+      '#value' => $output,
+     );         
+
+    $form['page_number'] = array(
+    '#type' => 'hidden',
+    '#value' => $page_number,
+    );
+    
+    $form['page_next'] = array(
+    '#type' => 'submit',
+    '#value' => 'page next',
+    );      
+  
+    /*$form['model'] = array(
+    '#title' => t('Model'),
+    '#type' => 'select',
+    '#options' => array('a','b'),
+    '#prefix' => '<div class="container-inline container">', 
+    '#suffix' => '</div>',
+    //'#required' => true,
+    //'#description' => t('.'),
+  );*/  
+  
+    return $form;
+  
+}
+
+/**
+* 
+*/
+function coffeeclub_admin_service_accounts_form_validate($form, &$form_state) {
+  
+
+  
+}
+
+/**
+* 
+*/
+function coffeeclub_admin_service_accounts_form_submit($form, &$form_state) {
+  
+    $form_state['redirect'] = 'thecoffeeclub/accounts';
+  
+}
+
+
+function coffeeclub_admin_user_account_details($uid){
+  // load user object
+  $user = user_load($uid);
+  
+  // create user details array for account details
+  $account = new stdClass();
+  $address = new stdClass();  
+  isset($user->name) ? $account->name = $user->name : $account->name = '';
+  isset($user->profile_forename) ? $account->first_name = $user->profile_forename : $account->first_name = '';  
+  isset($user->profile_surname) ? $account->last_name = $user->profile_surname : $account->last_name = '';
+  isset($user->profile_marketing_emails) ? $account->optin = $user->profile_marketing_emails : $account->optin = 0;
+  
+  isset($user->profile_houseno) ? $address->house = $user->profile_houseno : $address->house = '';
+  isset($user->profile_street1) ? $address->address1 = $user->profile_street1 : $address->address1 = '';  
+  isset($user->profile_street2) ? $address->address2 = $user->profile_street2 : $address->address2 = '';  
+  isset($user->profile_county) ? $address->county = $user->profile_county : $address->county = '';
+  isset($user->profile_postcode) ? $address->postcode = $user->profile_postcode : $address->postcode = '';  
+  isset($user->profile_number_daytime) ? $address->phone = $user->profile_number_daytime : $address->phone = '';  
+  isset($user->profile_number_mobile) ? $address->mobile = $user->profile_number_mobile : $address->mobile = '';
+  
+  $account->title = '<h3>Account: '.$user->uid.'</h3>'.
+    '<div>Login: '.$account->name.'</div>'. 
+    '<div>Name: '.$account->first_name.' '.$account->last_name.'</div>';      
+    
+  // create products details
+  
+  
+  // create enquiry details
+    
+  $details = array();
+  $details['uid'] = $user->uid;
+  $details['account'] = $account;
+  $details['address'] = $address;   
+  
+  
+  return $details;
+  
+}
+
+/**
+ *
+ *
+ */  
+function coffeeclub_admin_user_account_user($uid){
+
+  $details = coffeeclub_admin_user_account_details($uid);
+  
+  $address_table = '<table>
+  <tr><th></th><th></th></tr>';
+  
+  foreach($details['address'] as $key =>$line){
+    $address_table .= '<tr><td>'.$key.'</td><td>'.$line.'</td></tr>';
+  }
+  
+  $address_table .= '</table>';
+  
+  
+  $details['address table'] =  $address_table;
+
+ return $details;
+} 
+
+/**
+ *
+ *
+ */  
+function coffeeclub_admin_user_products($uid){
+
+  $details = coffeeclub_admin_user_account_details($uid);
+  //  coffeeclub_user_product_registraitions_load requires a user object with a uid attribute
+  $user->uid = $uid;
+  $products = coffeeclub_user_product_registraitions_load($user);
+  
+
+  
+  // prepair for no products
+  $products_table = '<div>No products</div>';
+  $details['products table'] = $products_table;
+  if( count($products) < 1 ){ return $details; }
+  
+  // products have been registered
+  $details['account']->title .= '<div>Products registered: '.count($products).'</div>';
+  $details['account']->optin == 1? $optin = 'yes': $optin = 'no';
+  $details['account']->title .= '<div>Opt in: '.$optin.'</div>';  
+  $details['account']->title .= '<div><br />'.l('edit product offer email','').'</div><br />';
+     
+  $products_table = '<div>';
+  foreach( $products as $product ){
+    $product->has_receipt == 1? $product->has_receipt = 'yes': $product->has_receipt = 'no'; 
+    $products_table .= '<table class="product-details" >';  
+    $products_table .= '<tr><th></th><th></th></tr>';
+    $products_table .= '<tbody>';    
+    $products_table .= '<tr class="even" ><td>class</td><td>'.$product->name.'</td></tr>';    
+    $products_table .= '<tr><td>model</td><td>'.$product->model.'</td></tr>';
+    $products_table .= '<tr><td>serial</td><td>'.$product->serial.'</td></tr>';
+    $products_table .= '<tr><td>purchase date</td><td>'.date("d/m/Y",$product->purchase_date).'</td></tr>';
+    $products_table .= '<tr><td>registration date</td><td>'.date("d/m/Y",$product->registraition_date).'</td></tr>';    
+    $products_table .= '<tr><td>where purchased</td><td>'.$product->supplier_shop.'</td></tr>';
+    $products_table .= '<tr><td>has proof of purchase</td><td>'.$product->has_receipt.'</td></tr>';    
+    $products_table .= '<tr><td>premium customer</td><td></td></tr>';
+    $products_table .= '<tr><td>contact methods</td><td>'.str_replace(":",", ",$product->contact_methods).'</td></tr>';
+    $products_table .= '<tr><td>DISPATCH</td><td>AWAITING ?</td></tr>';    
+    $products_table .= '<tr><td>'.l('send product offer email','').'</td><td></td></tr>';        
+    $products_table .= '</tbody>';    
+    $products_table .= '</table>';    
+      
+  }
+  
+  $products_table .= '</div><br />';  
+  
+  // push the table onto the details stack
+  $details['products table'] = $products_table;  
+
+ return $details;
+}
+
+/**
+ *
+ *
+ */  
+function coffeeclub_admin_user_enquiries($uid){
+
+  $details = coffeeclub_admin_user_account_details($uid);
+  
+  /*$user->uid = $uid;
+  $enquiries = coffeeclub_enquiries_load_by_user($user);
+
+  // prepaire for no enquiries
+  $enquiries_table = '<div>No enquiries</div>';
+  $details['enquiries table'] = $enquiries_table;
+  if( count($enquiries) < 1 ){ return $details; } */
+  
+  /*
+  // enquiries have been made
+  $details['account']->title .= '<div>Enquiries registered: '.count($enquiries).'</div>';
+  
+  $enquiries_table = '<div>';
+  foreach( $enquiries as $enquiry ){
+    $enquiries_table .= '<table class="enquiry-details" >';  
+    $enquiries_table .= '<tr><th></th><th></th></tr>';
+    $enquiries_table .= '<tbody>';    
+    $enquiries_table .= '<tr class="even" ><td>Type</td><td>'.$enquiry->name.'</td></tr>';    
+    $enquiries_table .= '<tr><td>machine</td><td>'.$enquiry->model.' '.$enquiry->serial.'</td></tr>';
+    $enquiries_table .= '<tr><td>customer note</td><td>'.$enquiry->customer_message.'</td></tr>';
+    $enquiries_table .= '<tr><td>Service Response</td><td></td></tr>';
+    $enquiries_table .= '<tr><td colspan="2" ><textarea></textarea></td></tr>';                    
+    $enquiries_table .= '</tbody>';    
+    $enquiries_table .= '</table>'; 
+  }  
+  $enquiries_table .= '</div>';
+  
+  // push the table onto the details stack
+  $details['enquiries table'] = $enquiries_table;
+  */
+  
+  $form = drupal_get_form('coffeeclub_admin_user_enquiries_form');
+  
+  $details['enquiries table'] = $form;  
+
+ return $details;
+}
+
+function coffeeclub_admin_user_enquiries_form(){
+  $args = arg();
+  // no user id
+  if( !isset($args[4]) ) return false;
+  $uid = $args[4];
+  
+  $user->uid = $uid;
+  
+  $enquiries = coffeeclub_enquiries_load_by_user($user);
+  
+  /*dbg*/ drupal_set_message('<pre> <br>'.print_r($enquiries ,true).'</pre>');
+
+  // prepaire for no enquiries
+  $enquiries_table = '<div>No enquiries</div>';
+  $details['enquiries table'] = $enquiries_table;
+  if( count($enquiries) < 1 ){ return $details; }
+  
+/*dbg*/ drupal_set_message('<pre> <br>'.print_r( $args,true).'</pre>');
+
+    $form['model'] = array(
+    '#title' => 'Model',
+    '#type' => 'select',
+    '#options' => array(),
+    '#prefix' => '<div class="container-inline container">', 
+    '#suffix' => '</div>',
+    //'#required' => true,
+    //'#description' => t('.'),
+    );
+  
+    $form['header'] = array(
+    '#type' => 'markup',
+    '#value' => '<table>',
+    );  
+  
+    foreach( $enquiries as $enquiry ){
+      $form['eid'.$enquiry->eid] = array(
+      //'#title' => 'eid',
+      '#type' => 'markup',
+      '#value' => $enquiry->eid,
+      //'#prefix' => '<div class="container-inline container">', 
+      //'#suffix' => '</div>',
+      '#prefix' => '<tr><td>eid</td><td>',
+      '#suffix' => '</td></tr>',
+      
+      );
+          
+      
+      
+    }
+     
+    $form['footer'] = array(
+    '#type' => 'markup',
+    '#value' => '</table>',
+    );  
+  
+  return $form;
+  
+}
+
+
+function coffeeclub_admin_user_enquiries_form_submit( $form, &$form_state ){
+  /*dbg*/ drupal_set_message('<pre>$form_state[values] <br>'.print_r( $form_state['values'],true).'</pre>');
+
+}
